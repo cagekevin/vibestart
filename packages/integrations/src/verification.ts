@@ -18,7 +18,7 @@ import {
 import type { Facets } from "#/coverage.ts";
 import { bunFacets, pnpmFacets } from "#/coverage.ts";
 import { registry } from "#/registry.ts";
-import { stackLabel, taskLabel } from "#/stack-label.ts";
+import { stacksByLabel, stackLabel, taskLabel } from "#/stack-label.ts";
 
 /** Every stack is covered on Linux; the goldens are also verified on Windows. */
 export const platforms = ["linux", "windows"] as const;
@@ -59,9 +59,7 @@ export const verification = projectionSchema.parse(
   projections["../verification.json"] ?? emptyProjection()
 );
 
-const legal = new Map(
-  legalStacks(registry).map((stack) => [stackLabel(stack), stack])
-);
+const legal = stacksByLabel(legalStacks(registry));
 
 /** Docker adds only its own files and docs, so a stack without a deployment is verified as its Docker sibling. */
 export const verifiedAs = (stack: Stack): Stack =>

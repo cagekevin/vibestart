@@ -4,7 +4,7 @@ export { registry } from "#/registry.ts";
 
 export { materializeEnv, renderEnvFiles } from "#/env-files.ts";
 
-export { stackLabel } from "#/stack-label.ts";
+export { stackLabel, stacksByLabel } from "#/stack-label.ts";
 
 export { verificationOf, verifiedAs } from "#/verification.ts";
 

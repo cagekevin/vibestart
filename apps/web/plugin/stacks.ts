@@ -8,7 +8,11 @@ import {
   generate,
   legalStacks,
 } from "@vibestart/core";
-import { verificationOf, registry, stackLabel } from "@vibestart/integrations";
+import {
+  verificationOf,
+  registry,
+  stacksByLabel,
+} from "@vibestart/integrations";
 import type { VerificationMatch } from "@vibestart/integrations";
 
 import type {
@@ -22,9 +26,7 @@ import { projectKey } from "../src/lib/project.ts";
 /** The name the CLI gives a project when it is not asked for one. */
 export const previewName = "my-app";
 
-const legal = new Map(
-  legalStacks(registry).map((stack) => [stackLabel(stack), stack])
-);
+const legal = stacksByLabel(legalStacks(registry));
 
 export const registryInfo: RegistryInfo = {
   addons: registry.addons.map((addon) => omit(addon, ["contribute"])),

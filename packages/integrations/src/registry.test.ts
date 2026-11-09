@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolve } from "@vibestart/core";
+import { legalStacks, resolve } from "@vibestart/core";
 
 import { registry } from "#/registry.ts";
+import { stacksByLabel } from "#/stack-label.ts";
 
 describe("the registry", () => {
+  // A label keys the preview file, the golden directory, and the verification record: two stacks that share one
+  // would share a record, and a project would be told it is verified without ever having run.
+  it("gives every legal stack a label of its own", () => {
+    expect(stacksByLabel(legalStacks(registry)).size).toBe(
+      legalStacks(registry).length
+    );
+  });
+
   it("links every third-party integration to its official site over HTTPS", () => {
     // `self` and `governance` are vibestart's own glue: a framework's server routes, and the rules and
     // scripts this repository ships. Neither has a project of its own to link.
