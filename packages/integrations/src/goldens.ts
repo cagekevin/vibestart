@@ -1,0 +1,88 @@
+import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+
+import type { Generation, Stack } from "@vibestart/core";
+import { legalStacks } from "@vibestart/core";
+
+import { registry } from "#/registry.ts";
+import { repoRoot } from "#/repo.ts";
+import { stackLabel } from "#/stack-label.ts";
+
+/**
+ * One product each, and together every integration.
+ * A browser app, a full-stack app on its own server, a site with a documented
+ * HTTP API, a desktop client of a hosted API, a mobile client of an API, and a
+ * small Bun service. Four Worker products cover static assets, SSR, and both external database drivers.
+ * A project that only swaps a choice one of these already uses — the test runner,
+ * Node beside the Bun service, or `self` on a second framework — is not a golden.
+ */
+const goldenLabels = [
+  "spa-effect-http-effect-rpc-postgres-better-auth-docker-e2e",
+  "spa-hono-orpc-postgres-better-auth-docker-e2e",
+  "tanstack-start-self-orpc-postgres-prisma-better-auth-docker",
+  "next-hono-openapi-mysql-better-auth-docker",
+  "spa-hono-orpc-postgres-better-auth-electron-docker",
+  "hono-orpc-mongodb-better-auth-expo-docker",
+  "hono-openapi-sqlite-bun-docker",
+  "spa-void",
+  "tanstack-start-self-orpc-postgres-better-auth-void",
+  "spa-hono-orpc-postgres-better-auth-void",
+  "spa-hono-openapi-mysql-better-auth-void-e2e",
+];
+
+export const goldens: Record<string, Stack> = Object.fromEntries(
+  goldenLabels.map((label) => {
+    const stack = legalStacks(registry).find(
+      (legal) => stackLabel(legal) === label
+    );
+
+    if (stack === undefined) {
+      throw new Error(`Golden ${label} is not a legal stack`);
+    }
+
+    return [label, stack];
+  })
+);
+
+export const goldenRoot = (golden: string) => `${repoRoot}golden/${golden}/`;
+
+export const goldenPaths = (golden: string) => {
+  const root = goldenRoot(golden);
+
+  return execFileSync(
+    "git",
+    ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+    { cwd: root, encoding: "utf-8" }
+  )
+    .split("\0")
+    .filter((file) => file !== "" && existsSync(`${root}${file}`));
+};
+
+export const isGitIgnoredSetupWrite = (
+  gitignore: string,
+  glob: string
+): boolean => {
+  const ignored = gitignore
+    .split("\n")
+    .filter((line) => line !== "" && !line.startsWith("!"))
+    .map((line) => line.replace(/\/$/u, ""));
+
+  return ignored.some(
+    (pattern) =>
+      glob === pattern ||
+      glob.startsWith(`${pattern}/`) ||
+      glob.includes(`/${pattern}/`) ||
+      glob.endsWith(`/${pattern}`)
+  );
+};
+
+export const trackedSetupWrites = (
+  generation: Generation
+): readonly string[] => {
+  const gitignore =
+    generation.files.find((file) => file.path === ".gitignore")?.content ?? "";
+
+  return generation.setup
+    .flatMap((command) => command.writes)
+    .filter((glob) => !isGitIgnoredSetupWrite(gitignore, glob));
+};

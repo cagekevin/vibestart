@@ -1,0 +1,21 @@
+/reference/
+node_modules
+dist
+coverage
+.source
+.vitest
+*.tsbuildinfo
+*.local
+*.log
+
+.env
+.env.*
+
+.DS_Store
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Written by `vp run stacks pull` from the verification store.
+packages/integrations/verification.json

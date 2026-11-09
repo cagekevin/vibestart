@@ -1,0 +1,32 @@
+{
+  "name": "my-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp run -r --parallel dev",
+    "build": "vp run -r build",
+    "ready": "vp check && vp run knip && vp test && vp run -r build",
+    "prepare": "vp config",
+    "db:generate": "vp run --filter @my-app/db db:generate",
+    "db:migrate": "vp run --filter @my-app/server db:migrate",
+    "db:studio": "vp run --filter @my-app/db db:studio",
+    "knip": "knip",
+    "adr": "node scripts/adr.mjs audit && node scripts/adr.mjs refs --check",
+    "arch": "node scripts/arch-index.mjs",
+    "debt": "node scripts/debt.mjs audit"
+  },
+  "devDependencies": {
+    "@my-app/config": "workspace:*",
+    "@types/node": "catalog:",
+    "knip": "catalog:",
+    "typescript": "catalog:",
+    "ultracite": "catalog:",
+    "vite-plus": "catalog:"
+  },
+  "engines": {
+    "bun": ">=1.4.4",
+    "node": "26.13.0"
+  },
+  "packageManager": "pnpm@12.16.1"
+}

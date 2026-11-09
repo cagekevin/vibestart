@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "name": {
+      "description": "The project name the templates were rendered with. A recipe ignores it.",
+      "type": "string"
+    },
+    "version": {
+      "description": "The vibestart release that generated the project. Maintenance regenerates that release's templates as the merge base. A recipe ignores it.",
+      "type": "string"
+    },
+    "addons": {
+      "default": ["knip", "ultracite", "governance"],
+      "type": "array",
+      "items": { "type": "string", "enum": ["knip", "ultracite", "governance"] }
+    },
+    "channel": { "type": "string", "enum": ["recommended"] },
+    "packageManager": { "type": "string", "enum": ["pnpm", "bun"] },
+    "stack": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "standard",
+          "type": "string",
+          "enum": ["standard", "effect"]
+        },
+        "toolchain": { "type": "string", "enum": ["vite-plus"] },
+        "frontend": { "type": "string", "enum": ["react"] },
+        "framework": {
+          "type": "string",
+          "enum": ["spa", "tanstack-start", "next"]
+        },
+        "router": { "type": "string", "enum": ["tanstack-router"] },
+        "backend": {
+          "type": "string",
+          "enum": ["hono", "effect-http", "self"]
+        },
+        "api": { "type": "string", "enum": ["orpc", "effect-rpc", "openapi"] },
+        "database": {
+          "type": "string",
+          "enum": ["postgres", "mysql", "sqlite", "mongodb"]
+        },
+        "orm": { "type": "string", "enum": ["drizzle", "prisma", "mongoose"] },
+        "auth": { "type": "string", "enum": ["better-auth"] },
+        "ui": { "type": "string", "enum": ["shadcn"] },
+        "desktop": { "type": "string", "enum": ["electron"] },
+        "mobile": { "type": "string", "enum": ["expo"] },
+        "runtime": { "type": "string", "enum": ["node", "bun", "workers"] },
+        "deployment": { "type": "string", "enum": ["docker", "void"] },
+        "testing": {
+          "anyOf": [
+            { "type": "string", "enum": ["playwright", "e2e"] },
+            {
+              "type": "string",
+              "enum": ["vitest-playwright", "vitest-e2e"],
+              "deprecated": true
+            }
+          ]
+        }
+      },
+      "required": ["toolchain", "testing"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["channel", "stack"],
+  "additionalProperties": false
+}

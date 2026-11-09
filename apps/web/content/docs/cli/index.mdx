@@ -1,0 +1,90 @@
+---
+title: CLI overview
+description: Create projects, add capabilities, inspect their state, and apply template upgrades.
+---
+
+The vibestart CLI creates projects and maintains them afterwards. It needs no global installation; run it through your package manager:
+
+<Tabs group="pm" items={["pnpm", "npm", "bun"]}>
+<Tab value="pnpm">
+
+```sh
+npx vibestart-cli <command>
+```
+
+</Tab>
+<Tab value="npm">
+
+```sh
+npx vibestart-cli <command>
+```
+
+</Tab>
+<Tab value="bun">
+
+```sh
+bunx vibestart-cli <command>
+```
+
+</Tab>
+</Tabs>
+
+## Commands [#commands]
+
+| Command                        | Purpose                                                      |
+| ------------------------------ | ------------------------------------------------------------ |
+| [`create`](/docs/cli/create)   | Create a project; the `create` keyword is optional           |
+| [`add`](/docs/cli/add)         | Add Knip, Ultracite, or Docker to an existing project        |
+| [`doctor`](/docs/cli/doctor)   | Inspect configuration and maintenance state, without writing |
+| [`upgrade`](/docs/cli/upgrade) | Preview and apply template updates                           |
+
+To let a coding agent run these commands for you, install the [vibestart skill](/docs/cli/skill).
+
+## Maintenance workflow [#workflow]
+
+Every command that changes an existing project follows the same steps. Run them from the project directory:
+
+<Steps>
+<Step title="Inspect">
+
+`doctor` reports the project's template version, any problems, and whether an update is available. It never writes.
+
+```sh
+npx vibestart-cli doctor --offline
+```
+
+</Step>
+<Step title="Preview">
+
+`--dry-run` prepares the change plan from the original template, your current files, and the target template, and shows it without writing.
+
+```sh
+npx vibestart-cli upgrade --dry-run
+```
+
+</Step>
+<Step title="Apply">
+
+Commit your work first: a write starts from a clean Git worktree. Confirm the plan in the terminal, or pass `--yes` where there is no terminal. Dependencies are installed and the project is checked afterwards.
+
+```sh
+npx vibestart-cli upgrade --yes
+```
+
+</Step>
+<Step title="Review">
+
+`git diff` shows every change. After a conflict, resolve the markers written into the files, then run the installation and checks the result names. `git restore . && git clean -fd` undoes the write.
+
+</Step>
+</Steps>
+
+<Callout type="warn" title="Keep the project record">
+  `vibestart.jsonc` records the project's `name` and the `version` of the
+  release that generated it. Upgrades regenerate that release's templates from
+  them, so commit the file and leave those fields as the CLI wrote them.
+</Callout>
+
+## Project and output options [#options]
+
+Maintenance commands accept `--cwd <project>` to target another directory, and `--json` for output that scripts can read. See [Automation](/docs/cli/automation) for every flag and exit code.

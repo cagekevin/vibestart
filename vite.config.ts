@@ -1,0 +1,147 @@
+import oxfmt from "ultracite/oxfmt";
+import antiSlop from "ultracite/oxlint/anti-slop";
+import core from "ultracite/oxlint/core";
+import react from "ultracite/oxlint/react";
+import shadcn from "ultracite/oxlint/shadcn";
+import tanstack from "ultracite/oxlint/tanstack";
+import vitest from "ultracite/oxlint/vitest";
+import { defineConfig } from "vite-plus";
+
+// Golden projects and prototypes are separate workspaces checked by their own config; templates
+// are fragments of generated projects and are checked through generated output.
+// Agent skills are installed from upstream and pinned by hash in `skills-lock.json`, so reformatting one makes it drift.
+// Paraglide writes its compile cache under the Studio while `vp dev` runs, so it is neither authored nor stable.
+const foreignFiles = [
+  ".agents/skills/**",
+  ".claude/skills/**",
+  "apps/web/project.inlang/cache/**",
+  "golden/**",
+  "prototypes/**",
+  "reference/**",
+  "packages/integrations/templates/**",
+];
+
+const generatedFiles = ["apps/web/.source/**", "apps/web/src/paraglide/**"];
+
+const vendoredFiles = [
+  "packages/ui/src/components/**",
+  "packages/ui/src/hooks/**",
+];
+
+export default defineConfig({
+  fmt: {
+    ...oxfmt,
+    ignorePatterns: [
+      ...(oxfmt.ignorePatterns ?? []),
+      ...foreignFiles,
+      ...generatedFiles,
+    ],
+    proseWrap: "preserve",
+    sortImports: {
+      // Workspace packages sort as their own group, between npm packages and `#/` imports.
+      customGroups: [
+        {
+          elementNamePattern: ["@vibestart/**"],
+          groupName: "workspace",
+        },
+      ],
+      groups: [
+        "builtin",
+        "external",
+        "workspace",
+        ["internal", "subpath"],
+        ["parent", "sibling", "index"],
+        "style",
+        "unknown",
+      ],
+    },
+  },
+  lint: {
+    extends: [core, react, tanstack, shadcn, vitest, antiSlop],
+    ignorePatterns: [
+      ...(core.ignorePatterns ?? []),
+      ...foreignFiles,
+      ...generatedFiles,
+      ...vendoredFiles,
+    ],
+    jsPlugins: [
+      // Knip reads this string. A spread of `shadcn.jsPlugins` is invisible to it.
+      { name: "shadcn", specifier: "@shadcn/lint" },
+      { name: "vite-plus", specifier: "vite-plus/oxlint-plugin" },
+    ],
+    options: { typeAware: true, typeCheck: true },
+    overrides: [
+      {
+        // Shiki paints each token with the theme's own color. That color is grammar data, not a design-system choice.
+        files: [
+          "apps/web/src/components/code-view.tsx",
+          "apps/web/src/components/home/demo/change-demo.tsx",
+        ],
+        rules: { "shadcn/no-inline-styles": "off" },
+      },
+      {
+        // Motion writes the mark's blocks from pointer values it owns, so the position is a motion value, not a class.
+        files: ["apps/web/src/components/home/finale.tsx"],
+        rules: { "shadcn/no-inline-styles": "off" },
+      },
+      {
+        // React's `use` suspends on one stable promise per key. An async function would return a new promise every call.
+        files: [
+          "apps/web/src/lib/cached.ts",
+          "apps/web/src/lib/highlight.ts",
+          "apps/web/src/lib/projects.ts",
+        ],
+        rules: { "typescript/promise-function-async": "off" },
+      },
+      {
+        // A loader throws `notFound()` and `beforeLoad` throws `redirect()`. Both are objects rather than an `Error`.
+        files: ["apps/web/src/routes/**"],
+        rules: {
+          "typescript/only-throw-error": [
+            "error",
+            {
+              allow: [
+                {
+                  from: "package",
+                  name: "NotFoundError",
+                  package: "@tanstack/router-core",
+                },
+                {
+                  from: "package",
+                  name: "Redirect",
+                  package: "@tanstack/router-core",
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        // clack prompts are asked one after another, and each project command needs the one before it.
+        files: [
+          "apps/cli/src/create.ts",
+          "apps/cli/src/prompts.ts",
+          "apps/cli/src/maintenance/apply.ts",
+        ],
+        rules: { "eslint/no-await-in-loop": "off" },
+      },
+    ],
+    rules: {
+      "vite-plus/prefer-vite-plus-imports": "error",
+    },
+  },
+  staged: {
+    "*": ["node scripts/check-file-size.ts", "vp check --fix"],
+  },
+  test: {
+    // Matrix suites each invoke the native formatter; bound file parallelism to avoid oversubscription.
+    maxWorkers: 4,
+    // `packages/config` and `packages/ui` have no tests.
+    projects: [
+      "apps/cli",
+      "apps/web",
+      "packages/core",
+      "packages/integrations",
+    ],
+  },
+});

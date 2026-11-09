@@ -1,0 +1,121 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { describe, expect, it } from "vite-plus/test";
+
+import {
+  goldenPaths,
+  goldenRoot,
+  goldens,
+  trackedSetupWrites,
+} from "#/goldens.ts";
+import { registry } from "#/registry.ts";
+import { verifiedGeneration } from "#/verification.ts";
+
+/** Documentation the project owns: its presence is generated output, its wording is not. */
+const isProse = (file: string) =>
+  file === "AGENTS.md" || file.startsWith("docs/") || file.startsWith("daily/");
+
+const generations = await Promise.all(
+  Object.entries(goldens).map(async ([golden, stack]) => ({
+    generation: await verifiedGeneration(stack),
+    golden,
+    stack,
+  }))
+);
+
+describe("the golden projects", () => {
+  it("together use every integration", () => {
+    const used = new Set(
+      Object.values(goldens).flatMap((stack) => Object.values(stack))
+    );
+
+    expect(
+      registry.integrations
+        .map((integration) => integration.id)
+        .filter((id) => !used.has(id))
+    ).toStrictEqual([]);
+  });
+});
+
+describe.each(generations)("$golden", ({ generation, golden, stack }) => {
+  const { files, setup } = generation;
+  const setupWrites = setup.flatMap((command) => command.writes);
+  const paths = goldenPaths(golden);
+
+  const expected = new Map(
+    paths
+      .filter(
+        (file) => !setupWrites.some((glob) => path.matchesGlob(file, glob))
+      )
+      .map((file) => [
+        file,
+        readFileSync(`${goldenRoot(golden)}${file}`, "utf-8"),
+      ])
+  );
+
+  const generated = new Map(files.map((file) => [file.path, file.content]));
+  const trackedWrites = trackedSetupWrites(generation);
+
+  it("runs install, then generates the database client, route types or the route tree, and the initial migration", () => {
+    expect(setup.map((command) => command.run)).toStrictEqual([
+      "vp install",
+      ...(stack.orm === "prisma"
+        ? ["vp run --filter @my-app/db db:init", "vp run db:client"]
+        : []),
+      ...(stack.framework === "next" ? ["vp run typegen"] : []),
+      ...(stack.deployment === "void" && stack.backend !== undefined
+        ? [
+            `vp exec --filter @my-app/${stack.backend === "hono" ? "server" : "web"} void prepare`,
+          ]
+        : []),
+      ...(stack.router === "tanstack-router" ? ["vp run typegen"] : []),
+      ...(stack.orm === "drizzle" ? ["vp run db:generate --name init"] : []),
+    ]);
+  });
+
+  it("generates exactly the golden paths", () => {
+    expect([...generated.keys()].toSorted()).toStrictEqual(
+      [...expected.keys()].toSorted()
+    );
+    expect(
+      trackedWrites.filter(
+        (glob) => !paths.some((file) => path.matchesGlob(file, glob))
+      )
+    ).toStrictEqual([]);
+
+    const importedRoutes =
+      stack.router === "tanstack-router"
+        ? [
+            ...readFileSync(
+              `${goldenRoot(golden)}apps/web/src/routeTree.gen.ts`,
+              "utf-8"
+            ).matchAll(/from '\.\/(?<route>routes\/[^']+)'/gu),
+          ]
+            .map(({ groups }) => groups?.route ?? "")
+            .toSorted()
+        : [];
+
+    const generatedRoutes =
+      stack.router === "tanstack-router"
+        ? [...generated.keys()]
+            .flatMap((file) =>
+              file.startsWith("apps/web/src/routes/")
+                ? [file.slice("apps/web/src/".length).replace(/\.tsx?$/u, "")]
+                : []
+            )
+            .toSorted()
+        : [];
+
+    expect(importedRoutes).toStrictEqual(generatedRoutes);
+  });
+
+  // Prose the project owns: its path is generated output, its wording is not. Pinning the words would turn
+  // every edit to a sentence into eleven golden changes, and prove nothing about the generator.
+  it.each([...expected.keys()].filter((file) => !isProse(file)))(
+    "%s",
+    (file) => {
+      expect(generated.get(file)).toBe(expected.get(file));
+    }
+  );
+});

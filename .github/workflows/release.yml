@@ -1,0 +1,62 @@
+name: Release
+
+# Push a tag `vX.Y.Z` or `vX.Y.Z-beta.N` that matches apps/cli/package.json. npm authenticates this
+# workflow through trusted publishing (npmjs.com → vibestart-cli → Settings → Trusted publisher:
+# VinkyDev/vibestart, workflow `release.yml`), so no token or one-time password is involved.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - run: vp install
+      - name: Tag matches the package version
+        run: test "v$(node -p "require('./apps/cli/package.json').version")" = "$VERSION"
+      - run: vp run ready
+      # The CLI embeds the records this writes. `check` exits 1 when a task has none, so an unverified stack never ships.
+      - run: vp run stacks pull
+      - run: vp run stacks check
+      # `vp pm pack` is pnpm's pack: it replaces `catalog:` and `workspace:`, which `npm publish` would not.
+      - name: Pack
+        working-directory: apps/cli
+        run: |
+          vp pack
+          vp pm pack --pack-destination "$RUNNER_TEMP/pack"
+      # A version with a prerelease suffix goes to `beta`, so `latest` only ever moves to a stable release.
+      - name: Publish
+        run: |
+          case "$VERSION" in *-*) tag=beta ;; *) tag=latest ;; esac
+          npm publish "$RUNNER_TEMP"/pack/*.tgz --tag "$tag" --access public
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          case "$VERSION" in *-*) flag=--prerelease ;; *) flag= ;; esac
+          gh release create "$VERSION" packages/integrations/verification.json --verify-tag --title "$VERSION" --generate-notes $flag
+
+  # Workers Builds listens for branches. The hook builds main once this tag has published.
+  studio:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy the Studio
+        env:
+          CLOUDFLARE_DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+        run: |
+          test -n "$CLOUDFLARE_DEPLOY_HOOK"
+          curl --fail --silent --show-error --retry 3 -X POST "$CLOUDFLARE_DEPLOY_HOOK"

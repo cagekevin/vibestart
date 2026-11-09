@@ -1,0 +1,14 @@
+{
+  "title": "技术栈",
+  "pages": [
+    "index",
+    "effect",
+    "toolchain",
+    "frontend",
+    "mobile",
+    "backend",
+    "data",
+    "testing",
+    "delivery"
+  ]
+}

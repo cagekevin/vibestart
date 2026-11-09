@@ -1,0 +1,16 @@
+.git
+**/node_modules
+**/dist
+**/coverage
+**/.vitest
+**/.tmp
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+**/*.bak
+**/*.tsbuildinfo
+**/*.local
+**/*.log
+**/scripts/.probe
+**/.env
+**/.env.*

@@ -1,0 +1,103 @@
+---
+title: Data and authentication
+description: Database options, schema migrations, and user sessions.
+---
+
+These choices decide where the application's records live and how users sign in. Sessions are stored in the same database as everything else.
+
+| Database   | Runs as                              | Suits                                                   |
+| ---------- | ------------------------------------ | ------------------------------------------------------- |
+| SQLite     | A file, inside the server            | Local development, prototypes, single-server deployment |
+| PostgreSQL | A separate database service          | Concurrent writes, several app instances, production    |
+| MySQL      | A separate database service          | Teams and hosts that already run MySQL                  |
+| MongoDB    | A separate document database service | Documents whose shape varies from one to the next       |
+
+Drizzle is the ORM for every SQL database, and Prisma the alternative on PostgreSQL and MySQL. MongoDB uses Mongoose.
+
+## PostgreSQL [#postgres]
+
+<Tech href="https://www.postgresql.org" icon="postgres" />
+
+PostgreSQL runs as a separate relational database service with transactions, constraints, and concurrent access. Generated projects include Compose configuration for development. Use `DATABASE_URL` to connect to an existing instance.
+
+## MySQL [#mysql]
+
+<Tech href="https://www.mysql.com" icon="mysql" />
+
+MySQL runs as a separate relational database service, like PostgreSQL. Generated projects include Compose configuration for MySQL 8.4 and connect through `mysql2`. MySQL has no `RETURNING`, so the example API reads a row back after each write. Use `DATABASE_URL` to connect to an existing instance.
+
+## MongoDB [#mongodb]
+
+<Tech href="https://www.mongodb.com" icon="mongodb" />
+
+MongoDB stores JSON-like documents in collections instead of rows in tables. Generated projects include Compose configuration for MongoDB 8 and reach it through Mongoose. The example API names a todo by its `ObjectId`, a 24-character hex string. Use `DATABASE_URL` to connect to an existing instance, such as MongoDB Atlas.
+
+## SQLite [#sqlite]
+
+<Tech href="https://nodejs.org/api/sqlite.html" icon="sqlite" />
+
+SQLite stores data in a single file without a separate database service, making it suitable for local development and single-host deployment. Projects use the `node:sqlite` interface, also supported by the selected Bun runtime. Persist the database directory when deploying.
+
+## Drizzle [#drizzle]
+
+<Tech href="https://orm.drizzle.team" icon="drizzle" />
+
+Drizzle defines tables and typed queries in TypeScript. Schemas and migrations live in `packages/db`. After changing a schema, generate and review the SQL migration before applying it:
+
+```sh
+vp run db:generate
+vp run db:migrate
+```
+
+Commit migration files to version control.
+
+<Callout type="warn">
+  Backing up production data and running migrations against it remain your
+  responsibility. Template upgrades never migrate a database.
+</Callout>
+
+<SchemaMigration
+  steps={[
+    { text: "The original table contains two todo records." },
+    {
+      text: "Add a nullable dueDate field to the schema; the database is unchanged.",
+    },
+    { text: "db:generate creates a SQL migration to review and commit." },
+    {
+      text: "db:migrate applies the migration, retaining records with NULL in the new field.",
+    },
+  ]}
+/>
+
+## Prisma [#prisma]
+
+<Tech href="https://www.prisma.io" icon="prisma" />
+
+Prisma 7 is the alternative ORM for PostgreSQL and MySQL. Models live in `packages/db/src/schema/*.prisma`, and Prisma generates a typed client into `packages/db/src/generated`, which is not committed. The client connects through a driver adapter (`@prisma/adapter-pg` or `@prisma/adapter-mariadb`) and bundles into the server, so the Docker image needs no `node_modules`. Prisma does not support SQLite here: its SQLite drivers are native modules.
+
+After changing a model, create the migration against the development database, review it, and apply it:
+
+```sh
+vp run db:generate --name add-due-date
+vp run db:migrate
+```
+
+`vp run db:client` regenerates the client; `vp run ready` and the build run it first. The server applies committed migrations at startup and records them in Prisma's `_prisma_migrations` table, so `prisma migrate status` reads the same history.
+
+## Mongoose [#mongoose]
+
+<Tech href="https://mongoosejs.com" icon="mongoose" />
+
+Mongoose 9 defines each collection as a schema in `packages/db/src/schema/` and registers it as a model in `createDb`. MongoDB has no migrations: add a field as optional, or with a default, so documents written before it still read. `vp run db:migrate` builds the indexes the schemas declare, and with Better Auth the indexes its collections need; the server runs it before it starts.
+
+```sh
+vp run db:migrate
+```
+
+## Better Auth [#better-auth]
+
+<Tech href="https://www.better-auth.com" icon="better-auth" />
+
+Better Auth provides email/password sign-up, sign-in, and session management. Configuration lives in `packages/auth`, and sessions are stored in the selected database. Generated projects include sign-in pages, protected routes, and authentication tests.
+
+Business endpoints use the session’s user ID to scope reads and writes. Authentication establishes identity; application logic defines data access. See [Identity and permissions](/docs/concepts#auth).

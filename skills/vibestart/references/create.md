@@ -1,0 +1,95 @@
+# Creating projects
+
+## Discover and preview
+
+```sh
+npx --yes vibestart-cli --help
+npx --yes vibestart-cli --list --json
+```
+
+Use the current list to resolve supported choices and legal combinations. Ask for missing consequential choices rather than silently selecting a different architecture. The destination must be absent or empty.
+
+Example: a React SPA with Hono, oRPC, SQLite, authentication, and the default extensions:
+
+```sh
+npx --yes vibestart-cli create my-app --framework spa --backend hono --api orpc --database sqlite --orm drizzle --auth better-auth --runtime node --testing playwright --desktop none --mobile none --deployment none --package-manager pnpm --dry-run --json
+```
+
+Every kind that has no default must be named. A stack that leaves one open returns `incomplete-stack` with the flags that close it; add those flags and run the same command again.
+
+## From requirements to choices
+
+Once the questions `SKILL.md` requires are answered, each answer decides a kind.
+
+| The user needs                                              | Choose                                                                                     |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Pages search engines must index, or share cards that render | `--framework tanstack-start` (or `next`), not `spa`                                        |
+| An interactive app, optionally behind a login               | `--framework spa --backend hono --api orpc`                                                |
+| Accounts, sessions, OAuth                                   | `--auth better-auth`, with a database                                                      |
+| Data that belongs to a user, or must survive a restart      | `--database postgres` (a server) or `sqlite` (a file beside the app), then `--orm drizzle` |
+| Typed calls from the app to its server                      | `--api orpc`; `openapi` when other clients call it too; `effect-rpc` in Effect mode        |
+| No server at all: a static site or a local tool             | `--backend none --api none --database none --orm none --auth none --runtime none`          |
+| A server process                                            | `--runtime node`, or `bun` for Hono on Bun                                                 |
+| A phone app, a desktop app                                  | `--mobile expo`, `--desktop electron`                                                      |
+| A container image, Cloudflare                               | `--deployment docker`; `--deployment void --runtime workers`                               |
+
+**Three of these cannot be added later.** `add` is not a migration command for a framework, a database, or a runtime, and it cannot introduce accounts: ask about accounts, persistence, and the deployment target before creating the project, not after.
+
+Inspect `ok`, `stack`, `addons`, `packageManager`, `files`, and `nextSteps`. When the resolved plan matches the request, run the same command without `--dry-run`. The `create` keyword is optional. Neither form accepts `--yes`, `--cwd`, or `--full-check`.
+
+The preview lists ignored local `.env` paths as well as tracked project files; `fileCount` includes both. It shows paths and owners, never environment values. Keep real environment values in ignored `.env` files and only safe examples in the README.
+
+Project creation generates a unique authentication secret. On a fresh clone, recreate local `.env` files from the README and fill any empty `BETTER_AUTH_SECRET` with the output of `openssl rand -base64 32`; the server rejects an unset secret. The Studio previews template files and the README examples, while the CLI preview also lists the local `.env` paths it will create.
+
+If the preview reports `incomplete-stack`, supply the remaining choices. If it reports `illegal-stack`, inspect the reported fixes and choose one consistent with the user's requirements. Do not retry by dropping their requested capabilities.
+
+## Package manager, runtime, and extensions
+
+- pnpm is the default package manager. The runtime is a choice: `--runtime node` or `--runtime bun`; Bun runtime requires Hono. Set `--package-manager bun` for Bun dependency management, `--runtime bun` for Hono on Bun, or both. Neither selects the runtime of other frameworks or the Vite+ toolchain.
+- Running the launcher through `pnpm dlx`, `npx`, or `bunx` does not select the generated project's package manager.
+- `--addons knip,ultracite` uses comma-separated IDs. `--addons none` explicitly excludes all extensions. Omitting the flag selects the release's defaults.
+- `--mobile expo` adds an iOS and Android app on Expo in `apps/mobile`. Add it when the user asks for a phone, iOS, or Android app. A mobile app alone is a legal stack (`--framework none --backend none`); add a backend only when the user asks for accounts, stored or synced data, or a server, and choose it by the same rules as for a web app. Docker deploys a web app or a server, so it needs one of them.
+- The mobile app runs in Expo Go during development (`vp run dev:mobile`). Expo Go carries one SDK version, and the App Store build stops at SDK 54: a physical iPhone or iPad needs an Expo Go build for the app's SDK through TestFlight (`eas go`) or a development build, while an Android device, an emulator, or a simulator installs the matching build from https://expo.dev/go. A native module Expo Go does not ship needs a development build, which needs Xcode or Android Studio. A release build needs `EXPO_PUBLIC_API_URL` when the app calls a server.
+- Void is a deployment choice (`--deployment void --runtime workers`, preview): static SPA, SPA + Hono, or TanStack Start, with optional external Postgres/MySQL + Drizzle and Better Auth. It excludes Next.js, SQLite, Prisma, MongoDB, standalone Hono, and TanStack + Hono. Do not deploy to Cloudflare without explicit authorization; follow the generated README for secrets, migration target, and `void.lock.json`.
+- Docker is a deployment choice at creation: `--deployment docker`, not `--addons docker`. For existing projects, use `add docker`.
+- Flags with `none` are supported only for optional kinds. Obtain the choices from `--list` rather than inventing values.
+- Unit and integration tests always run on Vitest. `--testing` picks the runner of a web project's end-to-end tests: `playwright` (Playwright: fully scripted tests on a stable 1.x API) or `e2e` (TesterArmy e2e: the same scripted tests, plus optional natural-language steps an AI agent runs; before 1.0). Choose from the user's needs; the flag has no default, so a stack that omits it reports the kind as undecided. An API-only project has no end-to-end tests, and the generated tests of either runner need no AI credentials.
+
+## Use a recipe
+
+```sh
+npx --yes vibestart-cli create my-app --recipe /actual/path/vibestart.jsonc --dry-run --json
+```
+
+Replace the example path. A recipe may be a file, directory, or URL. Stack flags override its choices. A recipe reproduces configuration; it does not preserve business edits. Its `name` and `version` describe the project it came from; the new project records its own.
+
+## Installation and validation
+
+Normal creation writes files, initializes Git, installs dependencies, runs generated setup and `vp fmt`, then runs `vp check`. Inspect returned steps and next steps; it does not run the full `ready` chain by default.
+
+| Option             | Effect                                                                  |
+| ------------------ | ----------------------------------------------------------------------- |
+| `--dry-run`        | Resolve and list files without writing                                  |
+| `--json`           | Emit one JSON object and disable prompts                                |
+| `--no-interactive` | Disable prompts; unresolved choices fail                                |
+| `--no-git`         | Skip repository initialization                                          |
+| `--no-install`     | Write files without installation, setup, formatting, or checks          |
+| `--no-check`       | Skip the final `vp check`; installation, setup and formatting still run |
+
+If installation was intentionally skipped, follow the generated `nextSteps` in order when the environment allows it. Maintenance commands do not replace this initial setup.
+
+## JSON and exit codes
+
+Creation returns `ok: true` for success. Failures return `ok: false` with an `error` object containing `code`, `message`, and, where relevant, resolution details. Exit codes are `0` for success, `1` for failure, and `130` for cancellation. Do not assume the maintenance error shape applies to creation.
+
+## Stack modes
+
+Standard is the default and suits most projects with familiar TypeScript and the widest choice of stacks. Use `--mode effect` when the user wants Effect or needs a stricter model for complex backend service flows, or `--list --mode effect` to list only its supported choices. Interactive creation asks for the mode first. Studio offers the same Standard/Effect switch.
+
+```sh
+pnpm dlx vibestart-cli my-app --mode effect
+```
+
+Effect mode combines React, TanStack Router, Effect HTTP/RPC and atoms, and Node. Choose Playwright or TesterArmy e2e, PostgreSQL or SQLite through native Effect/Drizzle drivers, or no database. Better Auth is optional and requires a database; no database also removes the ORM. Electron desktop (`--desktop electron`), Expo mobile (`--mobile expo`), and Docker (`--deployment docker`) are optional. Do not mix Standard transports, frameworks, or runtimes into this mode. The package manager is independent of the Node runtime. See [Effect mode](https://vibestart.net/docs/stack/effect).
+
+For Effect, discover available choices with `--list --mode effect --json`; older CLI releases may only offer the fixed stack. Use `--auth none` to omit authentication, or `--database none --orm none --auth none` to omit persistence entirely. A database without auth generates public, shared todos. `--testing playwright` and `--testing e2e` select the browser runner.

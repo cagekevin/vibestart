@@ -1,0 +1,18 @@
+* text=auto eol=lf
+golden/** linguist-generated=true
+# A prototype is authored, except for what its own tools write.
+prototypes/*/packages/db/src/migrations/** linguist-generated=true
+prototypes/*/packages/ui/src/components/** linguist-vendored=true
+apps/web/src/paraglide/** linguist-generated=true
+pnpm-lock.yaml linguist-generated=true
+skills-lock.json linguist-generated=true
+**/routeTree.gen.ts linguist-generated=true
+apps/web/.source/** linguist-generated=true
+packages/ui/src/components/** linguist-vendored=true
+.agents/skills/** linguist-vendored=true
+.claude/skills/** linguist-vendored=true
+# The governance kit's scripts are copied from another repository, so an upgrade stays a diff of upstream
+# files instead of a reformat of every line.
+packages/integrations/templates/governance/scripts/** linguist-vendored=true
+# Translation catalogs: Paraglide reads one file per locale, so they cannot be split.
+apps/web/messages/*.json linguist-generated=true

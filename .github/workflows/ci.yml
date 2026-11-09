@@ -1,0 +1,322 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A pull request keeps only its latest run. Each main commit runs to the end, so the evidence of every merge is recorded.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ready:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - run: vp install
+      - run: vp run ready
+
+  # The tasks whose current output no record vouches for, in the store or in this branch's earlier runs.
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      batches: ${{ steps.plan.outputs.batches }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - run: vp install
+      - run: vp run stacks evidence "$RUNNER_TEMP/evidence"
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: vp run stacks pull --evidence "$RUNNER_TEMP/evidence"
+      - id: plan
+        run: echo "batches=$(node packages/integrations/scripts/stacks.ts plan)" >> "$GITHUB_OUTPUT"
+      # This run carries what it reused, so the branch's next run, or main after the merge, finds it in one place.
+      - uses: actions/upload-artifact@v7.0.1
+        with:
+          name: results-reused
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: ignore
+
+  verify:
+    needs: plan
+    if: needs.plan.outputs.batches != '[]'
+    name: verify (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.batches) }}
+    services:
+      postgres:
+        # Service containers run only on Linux, and an empty image starts none; Windows uses the image's own PostgreSQL.
+        image: ${{ matrix.platform == 'linux' && 'postgres:18' || '' }}
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+      mysql:
+        image: ${{ matrix.platform == 'linux' && 'mysql:8.4' || '' }}
+        env:
+          MYSQL_ROOT_PASSWORD: mysql
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -pmysql"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+      mongodb:
+        image: ${{ matrix.platform == 'linux' && 'mongo:8' || '' }}
+        env:
+          # SERVER-125742: until hosted kernels have the rseq fix, glibc owns rseq so MongoDB uses safe per-thread caches.
+          GLIBC_TUNABLES: glibc.pthread.rseq=1
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: 1.4.4
+      - if: runner.os == 'Linux'
+        run: echo "STACKS_POSTGRES_URL=postgres://postgres:postgres@localhost:5432/postgres" >> "$GITHUB_ENV"
+      # The Windows image ships PostgreSQL as a disabled service, superuser `postgres` with password `root`.
+      - if: runner.os == 'Windows'
+        name: Start PostgreSQL
+        shell: pwsh
+        run: |
+          Set-Service postgresql-x64-17 -StartupType Manual
+          Start-Service postgresql-x64-17
+          & "$env:PGBIN\pg_isready.exe" --host localhost --timeout 60
+          if ($LASTEXITCODE -ne 0) { throw "PostgreSQL is not accepting connections" }
+          "STACKS_POSTGRES_URL=postgres://postgres:root@localhost:5432/postgres" >> $env:GITHUB_ENV
+      # Service containers run only on Linux, so Windows installs MySQL; root's password matches the container's.
+      - if: runner.os == 'Windows'
+        name: Start MySQL
+        uses: shogo82148/actions-setup-mysql@v1
+        with:
+          mysql-version: "8.4"
+          root-password: mysql
+      # MongoDB listens on localhost:27017 without auth, as the Linux container does; stacks use STACKS_MONGODB_URL's default.
+      - if: runner.os == 'Windows'
+        # The Windows image ships MongoDB 7.0, the newest this action starts there; Linux runs mongo:8.
+        name: Start MongoDB
+        uses: ankane/setup-mongodb@v1
+        with:
+          mongodb-version: "7.0"
+      - run: vp install
+      # Chromium's system libraries. Each project's own runner installs the browser build its version needs.
+      - if: runner.os == 'Linux'
+        run: vp exec playwright install-deps chromium
+        working-directory: apps/web
+        timeout-minutes: 10
+      - run: vp run stacks verify "$PATTERN" --jobs "$JOBS" --out "$RUNNER_TEMP/stacks"
+        env:
+          PATTERN: ${{ matrix.pattern }}
+          JOBS: ${{ matrix.jobs }}
+      # Also after a failure or a timeout: each pass is written as it finishes.
+      - if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: results-${{ matrix.name }}
+          path: ${{ runner.temp }}/stacks/results
+          if-no-files-found: ignore
+      - if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: logs-${{ matrix.name }}
+          path: ${{ runner.temp }}/stacks/*.log
+          if-no-files-found: ignore
+
+  studio:
+    name: Studio modes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - run: vp install
+      - run: vp build
+        working-directory: apps/web
+      - run: vp exec playwright install chromium --with-deps
+        working-directory: apps/web
+      - run: vp run test:e2e
+        working-directory: apps/web
+      - if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: studio-browser-results
+          path: apps/web/test-results
+          if-no-files-found: ignore
+
+  effect:
+    name: Effect golden Docker
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    defaults:
+      run:
+        working-directory: golden/spa-effect-http-effect-rpc-postgres-better-auth-docker-e2e
+        shell: bash
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+      # Goldens keep pure generator output without release-age exclusions; restore them for the container's frozen install.
+      - run: rm pnpm-lock.yaml && vp install --lockfile-only
+      - run: docker build --tag effect-golden .
+      - name: Smoke test the production image
+        run: |
+          mkdir -p apps/web/.e2e
+          docker run --rm --network host --env DATABASE_URL effect-golden node dist/migrate.mjs
+          docker run --rm --network host --env DATABASE_URL effect-golden node dist/migrate.mjs
+          docker run --detach --name effect-golden --network host \
+            --env DATABASE_URL \
+            --env BETTER_AUTH_URL=http://localhost:3000 \
+            --env BETTER_AUTH_SECRET=ci-secret-that-is-at-least-32-characters \
+            effect-golden
+          trap 'docker logs effect-golden > apps/web/.e2e/docker.log 2>&1; docker rm --force effect-golden' EXIT
+          timeout 60 bash -c 'until [ "$(docker inspect --format "{{.State.Health.Status}}" effect-golden)" = healthy ]; do sleep 2; done'
+          curl --fail --silent --output /dev/null http://localhost:3000/
+          curl --fail --silent --output /dev/null http://localhost:3000/api/openapi.json
+          node --input-type=module <<'JS'
+          import assert from "node:assert/strict";
+          const origin = "http://localhost:3000";
+          const signedUp = await fetch(`${origin}/api/auth/sign-up/email`, {
+            method: "POST",
+            headers: { "content-type": "application/json", origin },
+            body: JSON.stringify({ email: `${crypto.randomUUID()}@example.com`, name: "Smoke", password: "correct-horse-battery" }),
+          });
+          assert.equal(signedUp.status, 200);
+          const cookie = signedUp.headers.getSetCookie().map((value) => value.split(";")[0]).join("; ");
+          const response = await fetch(`${origin}/rpc`, {
+            method: "POST",
+            headers: { "content-type": "application/ndjson", cookie },
+            body: JSON.stringify({ _tag: "Request", id: "1", tag: "todos.create", payload: { title: "Production todo" }, headers: [] }) + "\n",
+          });
+          assert.equal(response.status, 200);
+          const { exit } = JSON.parse(await response.text());
+          assert.equal(exit._tag, "Success");
+          assert.equal(exit.value.title, "Production todo");
+          JS
+      - if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: effect-golden-logs
+          path: golden/spa-effect-http-effect-rpc-postgres-better-auth-docker-e2e/apps/web/.e2e
+          include-hidden-files: true
+          if-no-files-found: ignore
+
+  # The one required check: every job passed, and verify ran every planned task or had none.
+  ci:
+    if: always()
+    needs: [ready, plan, verify, effect, studio]
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          test "$STUDIO" = success
+          test "$EFFECT" = success
+          test "$READY" = success
+          test "$PLAN" = success
+          test "$VERIFY" = success || test "$VERIFY" = skipped
+        env:
+          STUDIO: ${{ needs.studio.result }}
+          EFFECT: ${{ needs.effect.result }}
+          READY: ${{ needs.ready.result }}
+          PLAN: ${{ needs.plan.result }}
+          VERIFY: ${{ needs.verify.result }}
+
+  # The only writer of the `verification` branch. It records every pass for main's output, even when another task failed.
+  record:
+    if: always() && github.ref == 'refs/heads/main' && needs.plan.result == 'success'
+    needs: [plan, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          ref: verification
+          path: .store
+      - uses: voidzero-dev/setup-vp@v1.21.1
+        with:
+          node-version-file: package.json
+          cache: true
+      - run: vp install
+      - uses: actions/download-artifact@v8.0.1
+        with:
+          pattern: results-*
+          path: ${{ runner.temp }}/results
+      - run: vp run stacks record "$RUNNER_TEMP/results" .store
+      # Another main commit may record at the same time. Records are separate files, and one already there is kept.
+      - name: Push new records
+        working-directory: .store
+        run: |
+          git add .
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -m "Record verification of ${GITHUB_SHA}"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:verification; then
+              exit 0
+            fi
+            git fetch --depth 1 origin verification
+            git rebase -X ours --onto FETCH_HEAD HEAD~1
+          done
+          exit 1

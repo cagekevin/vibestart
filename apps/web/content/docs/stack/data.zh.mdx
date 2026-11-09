@@ -1,0 +1,98 @@
+---
+title: 数据与认证
+description: 数据库选择、表结构迁移和用户会话。
+---
+
+这些选择决定应用的数据保存在哪里，以及用户如何登录。会话与其他数据存储在同一个数据库中。
+
+| 数据库     | 运行方式             | 适用场景                        |
+| ---------- | -------------------- | ------------------------------- |
+| SQLite     | 服务进程内的单个文件 | 本地开发、原型、单机部署        |
+| PostgreSQL | 独立的数据库服务     | 并发写入、多实例部署、生产环境  |
+| MySQL      | 独立的数据库服务     | 已在使用 MySQL 的团队与托管环境 |
+| MongoDB    | 独立的文档数据库服务 | 文档结构各不相同的数据          |
+
+Drizzle 适用于所有 SQL 数据库，PostgreSQL 与 MySQL 还可以选择 Prisma；MongoDB 使用 Mongoose。
+
+## PostgreSQL [#postgres]
+
+<Tech href="https://www.postgresql.org" icon="postgres" />
+
+PostgreSQL 是独立运行的关系型数据库，提供事务、约束和并发访问能力。生成项目包含本地开发的 Compose 配置，也可以通过 `DATABASE_URL` 连接已有实例。
+
+## MySQL [#mysql]
+
+<Tech href="https://www.mysql.com" icon="mysql" />
+
+MySQL 与 PostgreSQL 一样作为独立的关系型数据库服务运行。生成项目包含 MySQL 8.4 的 Compose 配置，并通过 `mysql2` 连接。MySQL 不支持 `RETURNING`，因此示例 API 在每次写入后重新读取该行。也可以通过 `DATABASE_URL` 连接已有实例。
+
+## MongoDB [#mongodb]
+
+<Tech href="https://www.mongodb.com" icon="mongodb" />
+
+MongoDB 以集合中的类 JSON 文档保存数据，而不是表中的行。生成项目包含 MongoDB 8 的 Compose 配置，并通过 Mongoose 访问。示例 API 用 `ObjectId`（24 位十六进制字符串）标识待办事项。也可以通过 `DATABASE_URL` 连接已有实例，例如 MongoDB Atlas。
+
+## SQLite [#sqlite]
+
+<Tech href="https://nodejs.org/api/sqlite.html" icon="sqlite" />
+
+SQLite 将数据库保存在单个文件中，无需独立数据库服务，适合本地开发与单机部署。项目通过 `node:sqlite` 接口访问数据；支持的 Bun 运行时提供对应兼容接口。部署时应持久化数据库文件所在目录。
+
+## Drizzle [#drizzle]
+
+<Tech href="https://orm.drizzle.team" icon="drizzle" />
+
+Drizzle 用 TypeScript 定义表结构，并构建带类型的查询。表结构和迁移位于 `packages/db`。修改表结构后，先生成 SQL 迁移并审阅，再应用到目标数据库：
+
+```sh
+vp run db:generate
+vp run db:migrate
+```
+
+迁移文件应提交到版本控制。
+
+<Callout type="warn">
+  生产数据的备份以及在生产环境执行迁移，需要由你负责。模板升级不会迁移数据库。
+</Callout>
+
+<SchemaMigration
+  steps={[
+    { text: "原始表包含两条待办记录。" },
+    { text: "在 schema 中添加可空的 dueDate 字段，尚未改变数据库。" },
+    { text: "db:generate 生成 SQL 迁移文件，审查后提交到版本控制。" },
+    { text: "db:migrate 应用迁移，保留已有记录，新字段初始为 NULL。" },
+  ]}
+/>
+
+## Prisma [#prisma]
+
+<Tech href="https://www.prisma.io" icon="prisma" />
+
+Prisma 7 是 PostgreSQL 与 MySQL 可选的另一种 ORM。模型位于 `packages/db/src/schema/*.prisma`，Prisma 将带类型的客户端生成到 `packages/db/src/generated`，该目录不提交。客户端通过驱动适配器（`@prisma/adapter-pg` 或 `@prisma/adapter-mariadb`）连接数据库，并打包进服务端，因此 Docker 镜像无需 `node_modules`。这里的 Prisma 不支持 SQLite：它的 SQLite 驱动是原生模块。
+
+修改模型后，基于开发数据库生成迁移，审阅后再应用：
+
+```sh
+vp run db:generate --name add-due-date
+vp run db:migrate
+```
+
+`vp run db:client` 重新生成客户端；`vp run ready` 和构建会先执行它。服务启动时应用已提交的迁移，并记录在 Prisma 的 `_prisma_migrations` 表中，因此 `prisma migrate status` 读取的是同一份历史。
+
+## Mongoose [#mongoose]
+
+<Tech href="https://mongoosejs.com" icon="mongoose" />
+
+Mongoose 9 将每个集合定义为 `packages/db/src/schema/` 中的 schema，并在 `createDb` 中注册为 model。MongoDB 没有迁移：新增字段应为可选或带默认值，以便之前写入的文档仍可读取。`vp run db:migrate` 会创建 schema 声明的索引，启用 Better Auth 时也会创建其集合所需的索引；服务启动前会先执行它。
+
+```sh
+vp run db:migrate
+```
+
+## Better Auth [#better-auth]
+
+<Tech href="https://www.better-auth.com" icon="better-auth" />
+
+Better Auth 提供邮箱密码注册、登录与会话管理，配置位于 `packages/auth`，会话存储在所选数据库中。生成项目包含登录页面、受保护路由和认证测试。
+
+业务接口使用会话中的用户标识限制查询和写入范围。认证确认用户身份，数据访问权限仍由业务逻辑定义。详见[身份与权限](/docs/concepts#auth)。
