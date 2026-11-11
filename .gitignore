@@ -19,3 +19,6 @@ coverage
 
 # Written by `vp run stacks pull` from the verification store.
 packages/integrations/verification.json
+
+# Paraglide's compile cache: `vp dev` and `vp test` rewrite it on every run.
+apps/web/project.inlang/cache/
