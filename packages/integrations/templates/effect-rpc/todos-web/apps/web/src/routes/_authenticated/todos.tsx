@@ -5,7 +5,7 @@ import {
 } from "@effect/atom-react";
 import { createFileRoute } from "@tanstack/react-router";
 import type { ErrorComponentProps } from "@tanstack/react-router";
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 import { Exit, Schema } from "effect";
 import { ListTodoIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "motion/react";

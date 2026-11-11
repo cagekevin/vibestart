@@ -5,7 +5,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 import { ListTodoIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";

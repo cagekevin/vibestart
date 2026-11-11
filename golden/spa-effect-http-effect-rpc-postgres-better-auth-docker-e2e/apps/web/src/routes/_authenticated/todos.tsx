@@ -18,6 +18,7 @@ import type { SubmitEvent } from "react";
 
 import { TodoTitle } from "@my-app/contracts";
 import type { Todo } from "@my-app/contracts";
+import { cn } from "@my-app/ui/class-names";
 import {
   Alert,
   AlertAction,
@@ -38,7 +39,6 @@ import {
 import { Input } from "@my-app/ui/components/input";
 import { Separator } from "@my-app/ui/components/separator";
 import { Spinner } from "@my-app/ui/components/spinner";
-import { cn } from "@my-app/ui/lib/utils";
 
 import {
   createTodoAtom,

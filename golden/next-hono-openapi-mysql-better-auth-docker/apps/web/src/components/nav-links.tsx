@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 
 const links = [
   { href: "/", label: "Home" },

@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import type { SubmitEvent } from "react";
 
+import { cn } from "@my-app/ui/class-names";
 import { Badge } from "@my-app/ui/components/badge";
 import { Button } from "@my-app/ui/components/button";
 import { Card, CardContent } from "@my-app/ui/components/card";
@@ -29,7 +30,6 @@ import {
 import { Input } from "@my-app/ui/components/input";
 import { Separator } from "@my-app/ui/components/separator";
 import { Spinner } from "@my-app/ui/components/spinner";
-import { cn } from "@my-app/ui/lib/utils";
 
 import { api } from "#src/clients/api.ts";
 import { useHydrated } from "#src/hooks/use-hydrated.ts";

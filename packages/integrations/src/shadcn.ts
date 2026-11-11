@@ -47,9 +47,8 @@ export const shadcn = defineIntegration({
       exports: {
         "./globals.css": "./src/styles/globals.css",
         "./components/*": "./src/components/*.tsx",
-        // `./lib/*` carries `cn`. A subpath that resolves nowhere turns every import of it into an
-        // error type under type-aware lint, so this points at `src/lib`, where the file lives.
-        "./lib/*": "./src/lib/*.ts",
+        // The className merger has a subpath that names what it returns, not where it sat.
+        "./class-names": "./src/class-names.ts",
         // shadcn's CLI writes hooks here, so the target exists before the first hook does.
         "./hooks/*": "./src/hooks/*.ts",
       },

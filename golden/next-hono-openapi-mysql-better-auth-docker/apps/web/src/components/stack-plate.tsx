@@ -1,4 +1,4 @@
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 
 /** One layer of the stack, drawn isometrically: the project's mark, from the home page to sign-in. */
 export const StackPlate = ({ active }: { active: boolean }) => {

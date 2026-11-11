@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

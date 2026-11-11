@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 
 const labels = {
   checking: "Checking the API",

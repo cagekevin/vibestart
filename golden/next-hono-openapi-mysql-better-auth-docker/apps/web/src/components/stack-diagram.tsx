@@ -3,7 +3,7 @@
 import { MotionConfig, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
-import { cn } from "@my-app/ui/lib/utils";
+import { cn } from "@my-app/ui/class-names";
 
 import { DotGrid } from "#src/components/dot-grid.tsx";
 import { StackPlate } from "#src/components/stack-plate.tsx";
