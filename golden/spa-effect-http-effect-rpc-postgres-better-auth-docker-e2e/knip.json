@@ -3,7 +3,7 @@
   "workspaces": {
     ".": {
       "entry": ["scripts/typegen.ts"],
-      "ignoreDependencies": ["effect"]
+      "ignoreDependencies": ["effect", "@vitest/coverage-v8"]
     },
     "apps/web": {
       "entry": [

@@ -12,6 +12,7 @@
     "**/.cloudflare/**": true,
     "scripts/adr.mjs": true,
     "scripts/debt.mjs": true,
-    "scripts/probe.mjs": true
+    "scripts/probe.mjs": true,
+    "scripts/scan.mjs": true
   }
 }

@@ -59,6 +59,11 @@ export const knip = defineAddon({
               )}\n`
           ),
         ]),
+    contribute(knipEntries, {
+      // Vitest loads its coverage provider by name at run time, so Knip sees no import of it.
+      ignoreDependencies: ["@vitest/coverage-v8"],
+      workspace: ".",
+    }),
     contribute(packageJson, {
       devDependencies: ["knip"],
       path: ".",

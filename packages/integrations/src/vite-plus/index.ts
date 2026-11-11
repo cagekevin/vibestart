@@ -237,6 +237,11 @@ const renderViteConfig = (ctx: Context, read: ReadSlot) => {
     '    "*": "vp check --fix",',
     "  },",
     "  test: {",
+    // `lcov` is what `scripts/scan.mjs` reads for per-function coverage. Vitest's own default
+    // reporters ship no `lcov.info`, so a project would compute coverage that nothing can read.
+    "    coverage: {",
+    '      reporter: ["text", "lcov"],',
+    "    },",
     // Without integration tests the project ships no Vitest test, and `vp test` must still pass.
     ...(projects.length > 0 ? [] : ["    passWithNoTests: true,"]),
     "    projects: [",
@@ -483,6 +488,8 @@ export const vitePlus = defineIntegration({
       devDependencies: [
         `${ctx.scope}/config`,
         "@types/node",
+        // Vitest loads its coverage provider by name, so `vp test --coverage` needs it beside Vitest.
+        "@vitest/coverage-v8",
         "typescript",
         ...(hasWebApp(ctx) ? ["vite"] : []),
         "vite-plus",

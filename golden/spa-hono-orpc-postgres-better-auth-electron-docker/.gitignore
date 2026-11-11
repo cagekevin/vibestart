@@ -15,6 +15,7 @@ release
 playwright-report
 test-results
 scripts/.probe
+.metrics
 
 .env
 .env.*

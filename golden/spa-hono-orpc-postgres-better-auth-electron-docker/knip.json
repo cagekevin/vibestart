@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["scripts/typegen.ts"]
+      "entry": ["scripts/typegen.ts"],
+      "ignoreDependencies": ["@vitest/coverage-v8"]
     },
     "apps/desktop": {
       "entry": [

@@ -3,6 +3,9 @@
   "workspaces": {
     "apps/mobile": {
       "ignoreDependencies": ["expo-updates"]
+    },
+    ".": {
+      "ignoreDependencies": ["@vitest/coverage-v8"]
     }
   }
 }

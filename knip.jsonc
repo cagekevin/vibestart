@@ -5,6 +5,9 @@
     ".": {
       // `vp staged` runs this from the `staged` block of vite.config.ts, which Knip does not read.
       "entry": ["scripts/check-file-size.ts"],
+      // Generated projects read these two from their own templates — `scripts/scan.mjs` parses with
+      // Oxc, and Vitest loads its coverage provider by name. No source in this repository imports either.
+      "ignoreDependencies": ["@vitest/coverage-v8", "oxc-parser"],
     },
     "packages/integrations": {
       "entry": ["src/stacks.ts"],

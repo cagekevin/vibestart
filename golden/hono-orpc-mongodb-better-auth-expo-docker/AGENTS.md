@@ -75,10 +75,11 @@ The mobile app in `apps/mobile` runs on Expo with Expo Router: each file in `src
 - **Proxy.** Better Auth rate-limits by client IP. Behind a reverse proxy, set `advanced.ipAddress` in `packages/auth` to the header that proxy sets. With no proxy, leave forwarding headers untrusted.
 - **Mobile.** Add a screen as a file in `apps/mobile/src/app`. Style React Native components with Tailwind classes in `className`, and reuse the components in `apps/mobile/src/components/ui`.
 - **Protected screen.** A screen that needs a user is listed under a `Stack.Protected guard={signedIn}` in `apps/mobile/src/app/_layout.tsx`. The guard is UX, and the server is the security boundary.
-- **Generated.** `apps/mobile/uniwind-types.d.ts`, `scripts/adr.mjs`, `scripts/debt.mjs`, and `scripts/probe.mjs` are tool output. Leave them unchanged. Metro rewrites it from the themes in `global.css`.
+- **Generated.** `apps/mobile/uniwind-types.d.ts`, `scripts/adr.mjs`, `scripts/debt.mjs`, `scripts/probe.mjs`, and `scripts/scan.mjs` are tool output. Leave them unchanged. Metro rewrites it from the themes in `global.css`.
 - **Utilities.** Import shared helpers from [es-toolkit](https://es-toolkit.dev/llms.txt), from the submodule the docs name (`import { retry } from "es-toolkit/function"`). `es-toolkit/compat` stays out.
 - **Knip.** Delete what `vp run knip` reports: unused files, exports, dependencies, and catalog entries. Add a Knip config entry only when a plugin cannot see a real reference.
 - **Ultracite.** Run `vp check` to apply the Ultracite lint and formatting presets, including framework rules and anti-slop checks for AI-written code. Fix the reported code instead of disabling the rules.
+- **Scan.** `vp run scan` reports facts — complexity × coverage, and structurally duplicated shapes. It judges nothing: never change code to make the table look better. When it says no coverage report was found, run `vp test --coverage` first; without coverage the CRAP column reflects complexity alone.
 
 ## Tests
 

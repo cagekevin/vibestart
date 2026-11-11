@@ -78,10 +78,11 @@ The desktop app wraps `apps/web`: `vp run dev` starts the web dev server and ope
 - **Protected page.** Put the route under `src/routes/_authenticated/`. The layout sends an anonymous visitor to `/login?redirect=…`. The session sits on the route context (`context.session`), loaded once per navigation in `__root.tsx` from `/api/auth/get-session`. This is an SPA: the page hide is UX, and the procedure is the security boundary. Sign-out clears the Query cache.
 - **Proxy.** Better Auth rate-limits by client IP. Behind a reverse proxy, set `advanced.ipAddress` in `packages/auth` to the header that proxy sets. With no proxy, leave forwarding headers untrusted.
 - **UI.** From `packages/ui`, run `pnpm dlx shadcn@latest add <component>` (Bun: `bunx --bun shadcn@latest add <component>`) and import `@my-app/ui/components/<name>`. Files in `packages/ui/src/components` and `packages/ui/src/hooks` are vendored shadcn and are not linted. App code is checked by `@shadcn/lint`: style a component through its variants, and use `className` on it only for layout.
-- **Generated.** `routeTree.gen.ts`, `packages/db/src/migrations/**`, `scripts/adr.mjs`, `scripts/debt.mjs`, and `scripts/probe.mjs` are tool output. Leave them unchanged.
+- **Generated.** `routeTree.gen.ts`, `packages/db/src/migrations/**`, `scripts/adr.mjs`, `scripts/debt.mjs`, `scripts/probe.mjs`, and `scripts/scan.mjs` are tool output. Leave them unchanged.
 - **Utilities.** Import shared helpers from [es-toolkit](https://es-toolkit.dev/llms.txt), from the submodule the docs name (`import { retry } from "es-toolkit/function"`). `es-toolkit/compat` stays out.
 - **Knip.** Delete what `vp run knip` reports: unused files, exports, dependencies, and catalog entries. Add a Knip config entry only when a plugin cannot see a real reference.
 - **Ultracite.** Run `vp check` to apply the Ultracite lint and formatting presets, including framework rules and anti-slop checks for AI-written code. Fix the reported code instead of disabling the rules.
+- **Scan.** `vp run scan` reports facts — complexity × coverage, and structurally duplicated shapes. It judges nothing: never change code to make the table look better. When it says no coverage report was found, run `vp test --coverage` first; without coverage the CRAP column reflects complexity alone.
 
 ## Tests
 

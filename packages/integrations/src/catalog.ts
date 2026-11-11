@@ -7,15 +7,21 @@ export const toolchainVersions = {
   vitePlus: "1.5.0",
 };
 
+/** Vitest ships with Vite+, and its coverage provider must be the same version. */
+const vitestVersion = "5.1.0";
+
 export const catalog = {
   toolchain: {
     "@types/bun": "^1.4.4",
+    "@vitest/coverage-v8": vitestVersion,
     "@e2e-dev/web": "^0.15.5",
     e2e: "^0.23.0",
     "@playwright/test": "^1.64.1",
     "@shadcn/lint": "^0.2.5",
     "@types/node": "^26.6.6",
     knip: "^6.44.1",
+    // `scripts/scan.mjs` parses source with Oxc, the parser Oxlint and Vitest already ship.
+    "oxc-parser": "^0.155.0",
     typescript: "^7.0.2",
     ultracite: "^8.1.1",
     undici: "^8.12.3",
@@ -30,7 +36,7 @@ export const catalog = {
     "@effect/sql-sqlite-node": "4.1.2",
     "@effect/vitest": "4.1.2",
     // @effect/vitest must share the Vitest instance that Vite+ runs.
-    vitest: "5.1.0",
+    vitest: vitestVersion,
   },
   web: {
     "@tailwindcss/postcss": "^4.3.4",

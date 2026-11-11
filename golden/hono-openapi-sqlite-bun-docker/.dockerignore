@@ -15,5 +15,6 @@
 **/*.db-shm
 **/*.db-wal
 **/scripts/.probe
+**/.metrics
 **/.env
 **/.env.*

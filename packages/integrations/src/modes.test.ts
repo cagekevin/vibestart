@@ -86,7 +86,7 @@ describe("stack modes", () => {
       files.find(({ path }) => path === "package.json")?.content
     ).toContain('"effect": "catalog:"');
     expect(files.find(({ path }) => path === "knip.json")?.content).toContain(
-      '"ignoreDependencies": ["effect"]'
+      '"ignoreDependencies": ["effect", "@vitest/coverage-v8"]'
     );
     expect(files.find(({ path }) => path === "AGENTS.md")?.content).toContain(
       agentsEffect.trimEnd()

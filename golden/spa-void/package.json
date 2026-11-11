@@ -14,13 +14,16 @@
     "knip": "knip",
     "adr": "node scripts/adr.mjs audit && node scripts/adr.mjs refs --check",
     "arch": "node scripts/arch-index.mjs",
-    "debt": "node scripts/debt.mjs audit"
+    "debt": "node scripts/debt.mjs audit",
+    "scan": "node scripts/scan.mjs"
   },
   "devDependencies": {
     "@my-app/config": "workspace:*",
     "@shadcn/lint": "catalog:",
     "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "knip": "catalog:",
+    "oxc-parser": "catalog:",
     "typescript": "catalog:",
     "ultracite": "catalog:",
     "vite": "catalog:",

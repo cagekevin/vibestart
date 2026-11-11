@@ -6,6 +6,7 @@ import {
   agentsSections,
   generatedFiles,
   ignoredFiles,
+  toolConventions,
   vendoredFiles,
 } from "#/vite-plus/slots.ts";
 
@@ -16,7 +17,7 @@ import agentsGovernance from "./agents-governance.md?raw";
  * them: they are upstream files a project runs, not source it edits, and a reformat would turn every future
  * copy of the kit into a whole-file diff.
  */
-const scripts = ["adr.mjs", "debt.mjs", "probe.mjs"];
+const scripts = ["adr.mjs", "debt.mjs", "probe.mjs", "scan.mjs"];
 
 /**
  * The records a project keeps about itself, split by how fast they change and who owns them: intent
@@ -55,13 +56,22 @@ export const governance = defineAddon({
     contribute(vendoredFiles, "scripts/arch-index.mjs"),
     // `probe.mjs` journals a file's original text before it injects a change; an interrupted run leaves one.
     contribute(ignoredFiles, "scripts/.probe"),
+    // `scan.mjs` writes the snapshot it also prints; it is output, not source.
+    contribute(ignoredFiles, ".metrics"),
     contribute(packageJson, {
+      // `scan.mjs` reads the source tree through Oxc's parser; nothing else here parses code.
+      devDependencies: ["oxc-parser"],
       path: ".",
       scripts: {
         adr: "node scripts/adr.mjs audit && node scripts/adr.mjs refs --check",
         arch: "node scripts/arch-index.mjs",
         debt: "node scripts/debt.mjs audit",
+        scan: "node scripts/scan.mjs",
       },
+    }),
+    contribute(toolConventions, {
+      text: "`vp run scan` reports facts — complexity × coverage, and structurally duplicated shapes. It judges nothing: never change code to make the table look better. When it says no coverage report was found, run `vp test --coverage` first; without coverage the CRAP column reflects complexity alone.",
+      title: "Scan",
     }),
   ],
   default: true,

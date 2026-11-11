@@ -17,6 +17,7 @@ packages/db/src/generated
 playwright-report
 test-results
 scripts/.probe
+.metrics
 
 .env
 .env.*

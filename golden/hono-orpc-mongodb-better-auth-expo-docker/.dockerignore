@@ -12,5 +12,6 @@
 **/*.local
 **/*.log
 **/scripts/.probe
+**/.metrics
 **/.env
 **/.env.*

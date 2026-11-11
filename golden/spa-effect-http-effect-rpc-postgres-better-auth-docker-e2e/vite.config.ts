@@ -13,6 +13,7 @@ const generatedFiles = [
   "scripts/adr.mjs",
   "scripts/debt.mjs",
   "scripts/probe.mjs",
+  "scripts/scan.mjs",
 ];
 
 const vendoredFiles = [
@@ -100,6 +101,9 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   test: {
+    coverage: {
+      reporter: ["text", "lcov"],
+    },
     projects: [
       {
         test: {

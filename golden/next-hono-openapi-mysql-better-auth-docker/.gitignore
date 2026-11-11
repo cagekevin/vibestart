@@ -16,6 +16,7 @@ next-env.d.ts
 playwright-report
 test-results
 scripts/.probe
+.metrics
 
 .env
 .env.*

@@ -13,6 +13,7 @@ coverage
 .tanstack
 .e2e
 scripts/.probe
+.metrics
 
 .env
 .env.*

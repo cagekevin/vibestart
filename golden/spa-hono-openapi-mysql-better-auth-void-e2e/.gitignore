@@ -17,6 +17,7 @@ coverage
 .wrangler/
 .e2e
 scripts/.probe
+.metrics
 
 .env
 .env.*

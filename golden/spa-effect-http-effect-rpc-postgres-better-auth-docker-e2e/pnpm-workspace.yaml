@@ -9,8 +9,10 @@ catalog:
   "@e2e-dev/web": ^0.15.5
   "@shadcn/lint": ^0.2.5
   "@types/node": ^26.6.6
+  "@vitest/coverage-v8": 5.1.0
   e2e: ^0.23.0
   knip: ^6.44.1
+  oxc-parser: ^0.155.0
   typescript: ^7.0.2
   ultracite: ^8.1.1
   vite: npm:@voidzero-dev/vite-plus-core@1.5.0
