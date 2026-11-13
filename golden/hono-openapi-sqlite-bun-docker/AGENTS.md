@@ -103,7 +103,7 @@ While iterating, run the narrowest set that covers the change: `vp test --projec
 
 ### 开工确认（硬性）
 
-**`docs/start.md` 还在 ⇒ 先按它把约定定下来，再动业务代码。** 它是开局引导，五件事做完就删。
+**`docs/start.md` 还在 ⇒ 先按它把约定定下来，再动业务代码。** 它是开局引导，第一件就是定技术栈 —— 要换现在换，不换以后不再换；全部做完就删。
 
 动任何文件之前，先读：
 
