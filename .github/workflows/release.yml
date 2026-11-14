@@ -2,7 +2,7 @@ name: Release
 
 # Push a tag `vX.Y.Z` or `vX.Y.Z-beta.N` that matches apps/cli/package.json. npm authenticates this
 # workflow through trusted publishing (npmjs.com → vibestart-cli → Settings → Trusted publisher:
-# VinkyDev/vibestart, workflow `release.yml`), so no token or one-time password is involved.
+# cagekevin/vibestart, workflow `release.yml`), so no token or one-time password is involved.
 on:
   push:
     tags: ["v*"]

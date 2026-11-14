@@ -1,6 +1,6 @@
 {
   "name": "vibestart-cli",
-  "version": "0.2.2",
+  "version": "0.2.4",
   "description": "Create a verified full-stack TypeScript project from a stack you compose",
   "keywords": [
     "create",
@@ -8,14 +8,14 @@
     "stack",
     "vite-plus"
   ],
-  "homepage": "https://github.com/VinkyDev/vibestart#readme",
+  "homepage": "https://github.com/cagekevin/vibestart#readme",
   "bugs": {
-    "url": "https://github.com/VinkyDev/vibestart/issues"
+    "url": "https://github.com/cagekevin/vibestart/issues"
   },
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/VinkyDev/vibestart.git",
+    "url": "git+https://github.com/cagekevin/vibestart.git",
     "directory": "apps/cli"
   },
   "bin": {
