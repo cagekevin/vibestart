@@ -15,10 +15,40 @@ A stack chosen from an unclear request is wasted work. The generator cannot add 
 
 If the user declines to answer, state each choice you will make in their place, one line of reasoning each, and let them correct those choices before you run anything.
 
+## 本机约定（这台机器，优先于下面的 npx）
+
+**不要用 `npx vibestart-cli`。** npm 上的版本可能落后于仓库源码：0.2.3 就没有 `governance` 这个 addon，生成出来的项目缺 `docs/adr`、`daily/架构日志`、`scripts/*.mjs`，看起来像"模板没带"。
+
+- 用本机软链：`vibestart`（`~/.local/bin/vibestart` → `~/Documents/vibestart/apps/cli/dist/cli.mjs`）。
+- 或直接跑产物：`node ~/Documents/vibestart/apps/cli/dist/cli.mjs`。
+- 改了仓库源码后：`cd ~/Documents/vibestart/apps/cli && vp pack`，软链自动指向新产物，不用重装。
+
+**生成前先确认 addon 在**：
+
+```bash
+vibestart --list --json | grep -c governance   # 必须 ≥ 1
+```
+
+**生成后核对这几样**（缺任何一项 = CLI 版本不对，重新打包，不要手工补）：
+
+| 路径 | 内容 |
+| --- | --- |
+| `docs/adr/` | ADR-0001…0009 + `README.md` 索引 |
+| `docs/` | `README.md`、`context.md`、`architecture.md`、`start.md`、`plan/`、`spec/` |
+| `daily/架构日志/` | `债务.md`、`债务-归档.md`、`_template.md`、`index.md` |
+| `scripts/` | `adr.mjs`、`debt.mjs`、`probe.mjs`、`scan.mjs`、`arch-index.mjs` |
+| `package.json` | `adr` / `arch` / `debt` / `scan` 四个脚本，`oxc-parser` 与 `@vitest/coverage-v8` |
+| `knip.json` | `ignoreDependencies: ["@vitest/coverage-v8"]`（只被 vitest 按需加载，代码里搜不到） |
+| `vite.config.ts` | `generatedFiles` 含四个治理脚本，`vendoredFiles` 含 `scripts/arch-index.mjs` |
+
+`vp run adr` 是**只读审计**，不是闸：它报"超过 80 行"是提示，不要为了让表好看而删内容。`vp run scan` 需要先有覆盖率（`vp test --coverage`），否则 CRAP 列只反映复杂度。
+
+**发布**：tag `vX.Y.Z` 必须与 `apps/cli/package.json` 的 `version` 相同，CI 用 trusted publishing，仓库绑 `cagekevin/vibestart`、workflow `release.yml`。npm 已占用 0.2.3，下一个版本从 0.2.4 起。
+
 ## Establish the context
 
 1. Identify the target directory and whether the request is creation or maintenance. Read the project's instructions. For an existing project, inspect `vibestart.jsonc` (its `name`, `version`, and choices), `package.json`, and Git status. Preserve unrelated edits.
-2. Run the CLI from npm with `npx --yes vibestart-cli` (or `pnpm dlx vibestart-cli`); a global install is not required. Resolve its version with `npx --yes vibestart-cli --version`. For a preview followed by application, append `@` and that exact published version to the package name in both commands so a new release cannot change the target between them.
+2. Run the CLI from npm with `npx --yes vibestart-cli` (or `pnpm dlx vibestart-cli`); a global install is not required. **On this machine use the local build instead — see 本机约定 above; the published package can lag behind the repo and ship without `governance`.** Resolve its version with `npx --yes vibestart-cli --version`. For a preview followed by application, append `@` and that exact published version to the package name in both commands so a new release cannot change the target between them.
 3. Installing this skill does not install the CLI, Vite+, or project dependencies. If a required tool is unavailable, follow its installation instructions within the user's scope rather than changing the selected stack.
 4. Read `npx --yes vibestart-cli --help` for creation or `npx --yes vibestart-cli COMMAND --help` for maintenance. Prefer `--json` for operations executed by an agent; keep stdout separate from stderr. Do not parse a task runner's banner as JSON.
 
